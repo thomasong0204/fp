@@ -118,22 +118,25 @@ def transformationMatrix(footprint,TVgrid):
 
     ## TVgrid POINTS
     ## small x and y in the example
-    TX4,TX3,TX1,TX2 = TVgrid[0]
-    TY4,TY3,TY1,TY2 = TVgrid[1]
+    if (TVgrid[0]!=0 and TVgrid[1] !=0):
+        TX4,TX3,TX1,TX2 = TVgrid[0]
+        TY4,TY3,TY1,TY2 = TVgrid[1]
 
-    matrixA = np.array([[TX4,TY4,1,0,0,0,-TX4*x4,-TY4*x4],
-                [TX3,TY3,1,0,0,0,-TX3*x3,-TY3*x3],
-                [TX1,TY1,1,0,0,0,-TX1*x1,-TY1*x1],
-                [TX2,TY2,1,0,0,0,-TX2*x2,-TY2*x2],
-                [0,0,0,TX4,TY4,1,-TX4*y2,-TY4*y2],
-                [0,0,0,TX3,TY3,1,-TX3*y2,-TY3*y2],
-                [0,0,0,TX2,TY2,1,-TX2*y1,-TY2*y1],
-                [0,0,0,TX1,TY1,1,-TX1*y1,-TY1*y1]])
+        matrixA = np.array([[TX4,TY4,1,0,0,0,-TX4*x4,-TY4*x4],
+                    [TX3,TY3,1,0,0,0,-TX3*x3,-TY3*x3],
+                    [TX1,TY1,1,0,0,0,-TX1*x1,-TY1*x1],
+                    [TX2,TY2,1,0,0,0,-TX2*x2,-TY2*x2],
+                    [0,0,0,TX4,TY4,1,-TX4*y2,-TY4*y2],
+                    [0,0,0,TX3,TY3,1,-TX3*y2,-TY3*y2],
+                    [0,0,0,TX2,TY2,1,-TX2*y1,-TY2*y1],
+                    [0,0,0,TX1,TY1,1,-TX1*y1,-TY1*y1]])
 
-    ## output matrix in real world coordinate system
-    O_matrix = np.array([x4,x3,x1,x2,y2,y2,y1,y1])
-    ## use python matrix solver to get the transformation matrix.
-    TMatrix = np.linalg.solve(matrixA,O_matrix)
+        ## output matrix in real world coordinate system
+        O_matrix = np.array([x4,x3,x1,x2,y2,y2,y1,y1])
+        ## use python matrix solver to get the transformation matrix.
+        TMatrix = np.linalg.solve(matrixA,O_matrix)
+    else:
+        TMatrix = [0,0,0,0,0,0,0,0]
 
     return TMatrix
     
@@ -177,27 +180,28 @@ if __name__ == '__main__':
             # Get_view_angle = getCameraFOOTPrint()[1]
 
             ## transformation matrix
+            print("process=> "+cam_uid)
             transformM = transformationMatrix(footprint,TVgrid)
             # print transformM
 
             Store_transformM(transformM,cam_uid)
 
             ## locationPosition (x,y)
-            a1 = [[sX,sY],[sX,sY+objectPixelH]]
-            CollectX = []
-            CollectY = []
-            for pos in a1:
-                xpos = pos[0]
-                ypos = pos[1]
-                realx,realy= realworldXY(xpos,ypos,transformM)
-                CollectX.append(realx)
-                CollectY.append(realy)
+            # a1 = [[sX,sY],[sX,sY+objectPixelH]]
+            # CollectX = []
+            # CollectY = []
+            # for pos in a1:
+            #     xpos = pos[0]
+            #     ypos = pos[1]
+            #     realx,realy= realworldXY(xpos,ypos,transformM)
+            #     CollectX.append(realx)
+            #     CollectY.append(realy)
 
-            objDist = math.sqrt((CollectY[0]-CollectY[1])**2 + (CollectX[0]-CollectX[1])**2)
-            distanceToCamera = math.sqrt((CollectY[0]-camY)**2 + (CollectX[0]-camX)**2)
+            # objDist = math.sqrt((CollectY[0]-CollectY[1])**2 + (CollectX[0]-CollectX[1])**2)
+            # distanceToCamera = math.sqrt((CollectY[0]-camY)**2 + (CollectX[0]-camX)**2)
             
-            objectHeight = (cam_height*objDist)/distanceToCamera
-            print objectHeight
+            # objectHeight = (cam_height*objDist)/distanceToCamera
+
 
     # print "screen to real world=>" + str(resultRW)
 

@@ -19,6 +19,7 @@ from shapely.affinity import rotate
 from shapely.wkt import dump
 import re
 
+
 def breakMultiPoly():
 	## this module is created a some polgon creates multipolygon after the clipping
     ## not beiong actived at this moment as we don't encounter this issue.
@@ -59,6 +60,9 @@ def ReformBackShape(bearingRad,PolyRotate,x2,x1,y1,cam_height,cameraToTop,camera
     ## rotation to be done in javascript
 
     return (ReformPoly)
+
+
+## move the update camera resolution script to another script as this is slowing dow the processing time
 
 
 def CreateFixedFootprint(view_angle, sensorWidth, sensorHeight, focusLength, bearing, cameraX, cameraY):
@@ -170,6 +174,7 @@ for camera in CameraList:
     camera_UID =camera[2]
     bearing = camera[5]
     focusLength = camera[6]
+    stream_url = camera[7]
     cam_height = camera[8]
     sensorWidth = camera[10]
     sensorHeight = camera[11]
@@ -183,6 +188,10 @@ for camera in CameraList:
 ##        viewingAngle = float(view_angle) * math.pi /180
         ## change the viewing angle to |\ <= viewing angle
         polyText = CreateFixedFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,cameraX,cameraY)
+
+        ## get the resolution of camera
+        
+
         polyFHolder = []
         polyText=str(polyText).replace("POLYGON ((","")
         polyText=str(polyText).replace("))","")
@@ -198,6 +207,7 @@ for camera in CameraList:
                                 set footprint_str = '%s'
                             where camera_uid = '%s';"""
 
+        
         cursor.execute(UpdateStatement % (str(polyFHolder),camera_UID))
         db.commit()
 
@@ -207,6 +217,10 @@ for camera in CameraList:
 
         polyTextdOME = CreateDOMEFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,cameraX,cameraY)
         # polystarement = "ST_GeomFromText('"+polyTextdOME+"',3857)"
+
+        ## get the resolution of camera
+        
+
         polyHolder = []
         polyTextdOME=str(polyTextdOME).replace("POLYGON ((","")
         polyTextdOME=str(polyTextdOME).replace("))","")
@@ -223,7 +237,8 @@ for camera in CameraList:
                                 set footprint_str = '%s'
                             where camera_uid = '%s';"""
 
-        cursor.execute(UpdateStatement % (str(polyHolder),camera_UID))
+  
+        cursor.execute(UpdateStatement % (str(polyFHolder),camera_UID))
 
         db.commit()
 
