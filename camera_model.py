@@ -1,14 +1,13 @@
+import ast
+import math
+import re
+
 import numpy as np
 import psycopg2
-import ast
-import re
-import math
-
 from shapely import wkb
-from shapely.geometry import Polygon
 from shapely.affinity import rotate
+from shapely.geometry import Polygon
 from shapely.wkt import dumps
-
 
 ## get the camera rotation matrix
 ## start with the camera model
@@ -40,21 +39,25 @@ def Store_transformM(transformM,cam_uid):
     dbhost="192.168.8.12"
     dbport="5432"
 
+    transCointainer = []
     ## update the transformation matrix to remove the white space and replace with a comma
-    convertmatrix = re.sub("([ ])",",",str(transformM))
-    convertmatrix = convertmatrix.replace(",,","")
-    
-   
+    for number in transformM:
+        transCointainer.append(number)
+
+
+    convertmatrix = str(transCointainer)
+    convertmatrixA = convertmatrix.lstrip("[")
+    convertmatrixB = convertmatrixA.rstrip("]")
 
     ## Load data from postgres
     db = psycopg2.connect(database=db, user=dbuser, password=dbpassword, host=dbhost, port=dbport)
-
-    ## extract the floor plan to compare
+    ## check if the data exist
     cursor = db.cursor()
+
     UpdateStatement = """update osi_camera
                             set transformation_matrix = %s
                             where camera_uid = %s;"""
-    act_sql = cursor.mogrify(UpdateStatement, (str(convertmatrix), cam_uid))
+    act_sql = cursor.mogrify(UpdateStatement, (str(convertmatrixB), cam_uid))
     # print act_sql
     cursor.execute(act_sql)
     db.commit()
@@ -75,7 +78,7 @@ def getCameraFOOTPrint():
     cursor = db.cursor()
     cursor.execute("""select * from "osi_camera";""") ## <== get the floor from the floor plan
     footprintA = cursor.fetchall()
-    
+
     del cursor
     del db
     return (footprintA)
@@ -104,7 +107,7 @@ def transformationMatrix(footprint,TVgrid):
     ##  this example works in python
 
     footprint2 = footprint[0:4]
-    
+
     ## x4,y2 ------------ x3,y2
     ##   |    (x4+x3)/2    |
     ##    |              |
@@ -114,7 +117,7 @@ def transformationMatrix(footprint,TVgrid):
     x3,y2 = footprint[1]
     x1,y1 = footprint[2]
     x2,y1 = footprint[3]
- 
+
 
     ## TVgrid POINTS
     ## small x and y in the example
@@ -139,8 +142,8 @@ def transformationMatrix(footprint,TVgrid):
         TMatrix = [0,0,0,0,0,0,0,0]
 
     return TMatrix
-    
-    
+
+
 
 if __name__ == '__main__':
     ## Screen resolution related
@@ -155,10 +158,10 @@ if __name__ == '__main__':
     objectPixelH = 310
 
     ## 4 points
- 
+
 
     for cameras in getCameraFOOTPrint():
-        
+
         cam_uid = cameras[2]
         cam_height = cameras[8]
 
@@ -175,12 +178,15 @@ if __name__ == '__main__':
         camY = camerapoint.xy[1]
 
         ## Check if footprint exist
-        if cameras[20] is not None:
-            footprint =  ast.literal_eval(cameras[20])
+        if cameras[22] is not None:
+            # footprint =  ast.literal_eval(cameras[20])
+            ## get the footprint pre ops.
+            footprint =  ast.literal_eval(cameras[22])
             # Get_view_angle = getCameraFOOTPrint()[1]
 
             ## transformation matrix
-            print("process=> "+cam_uid)
+
+
             transformM = transformationMatrix(footprint,TVgrid)
             # print transformM
 
@@ -199,12 +205,8 @@ if __name__ == '__main__':
 
             # objDist = math.sqrt((CollectY[0]-CollectY[1])**2 + (CollectX[0]-CollectX[1])**2)
             # distanceToCamera = math.sqrt((CollectY[0]-camY)**2 + (CollectX[0]-camX)**2)
-            
+
             # objectHeight = (cam_height*objDist)/distanceToCamera
 
 
     # print "screen to real world=>" + str(resultRW)
-
-
-
-

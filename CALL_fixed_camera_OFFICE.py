@@ -27,11 +27,12 @@ def breakMultiPoly():
    pass
 
 
-def ReformBackShape(bearingRad,PolyRotate,x2,x1,y1,cam_height,cameraToTop,cameraY):
+def ReformBackShape(bearingRad,PolyRotate,x2,x1,y1,cam_height,cameraToTop,cameraY,cam_geom):
 ## this is needed to repair the geometry. After clipping, the outline of the feature are changed to more than 4 points
 ## thus, a need to repair to ensure the geometry are back to 4 points.
     rotateback = 2*math.pi-bearingRad
     PolyRotate = rotate(PolyRotate,rotateback,cam_geom,use_radians=True)
+
     OldPolyBB = PolyRotate.bounds
     Minx = OldPolyBB[0]
     Maxx = OldPolyBB[2]
@@ -53,7 +54,6 @@ def ReformBackShape(bearingRad,PolyRotate,x2,x1,y1,cam_height,cameraToTop,camera
     else:
         newx1 = x1
 
-
     ## recreate the polygon
     ReformPoly = Polygon(((Minx,Maxy),(Maxx,Maxy),(newx1,y1),(newx2,y1)))
 
@@ -64,8 +64,64 @@ def ReformBackShape(bearingRad,PolyRotate,x2,x1,y1,cam_height,cameraToTop,camera
 
 ## move the update camera resolution script to another script as this is slowing dow the processing time
 
+def storeOrgdb(store_wkt,camera_UID):
 
-def CreateFixedFootprint(view_angle, sensorWidth, sensorHeight, focusLength, bearing, cameraX, cameraY):
+    db="osi_social_db"
+    dbuser="postgres"
+    dbpassword=""
+    dbhost="192.168.8.12"
+    dbport="5432"
+
+    ## Load data from postgres
+    db = psycopg2.connect(database=db, user=dbuser, password=dbpassword, host=dbhost, port=dbport)
+
+    ## extract the floor plan to compare
+    cursor = db.cursor()
+
+    checkStatement = """select count(uid) from office_footprint where uid = '%s';"""
+    cursor.execute(checkStatement % (camera_UID))
+    CheckResult, = cursor.fetchone()
+    if CheckResult == 1:
+        UpdateStatement3 = """update office_footprint set geom = ST_GeomFromText('%s',3857) where uid = '%s';"""
+        cursor.execute(UpdateStatement3 % (str(store_wkt),camera_UID))
+        db.commit()
+    else:
+        UpdateStatement3 = """insert into office_footprint (geom,uid) VALUES (ST_GeomFromText('%s',3857),'%s');"""
+        cursor.execute(UpdateStatement3 % (str(store_wkt),camera_UID))
+        db.commit()
+
+
+
+
+
+    polyFHolder = []
+    polyText=str(store_wkt).replace("POLYGON ((","")
+    polyText=str(polyText).replace("))","")
+    polytextList = polyText.split(",")
+    for data in polytextList:
+        cLEANstr = str(data).lstrip(" ")
+        splitstr = str(cLEANstr).split(" ")
+        floatContent = [float(digit) for digit in splitstr]
+        polyFHolder.append(floatContent)
+
+
+
+
+
+    # CheckFootprintExist = """Select count(uid) from office_footprint where uid = '%s';"""
+    UpdateStatement = """update osi_camera
+                            set footprint_str_preops = '%s'
+                        where camera_uid = '%s';"""
+
+    cursor.execute(UpdateStatement % (str(polyFHolder),camera_UID))
+    db.commit()
+
+    ## load
+
+
+
+def CreateFixedFootprint(view_angle, sensorWidth, sensorHeight, focusLength, bearing, cameraX, cameraY,camera_UID,floorplanPoly):
+
     viewingAngle = (90-float(view_angle)) * math.pi /180
     FOVWidthAngle = 2*math.atan(sensorWidth/(2*focusLength))
     FOVHeightAngle = 2*math.atan(sensorHeight/(2*focusLength))
@@ -100,16 +156,20 @@ def CreateFixedFootprint(view_angle, sensorWidth, sensorHeight, focusLength, bea
     ## Calculate z at x2.
     polyabc = Polygon(((x4,y2),(x3,y2),(x1,y1),(x2,y1)))
     PolyRotate = rotate(polyabc,bearingRad,cam_geom,use_radians=True)
+    ## load the pre-adjust to database
+    storeOrgdb(polyabc,camera_UID)
 
     ## operation to join floorplan with the floor print
-    PolyRotate = floorplanPoly.intersection(PolyRotate).convex_hull
-    PolyRotateB = ReformBackShape(bearingRad,PolyRotate,x2,x1,y1,cam_height,cameraToTop,cameraY) ## Rotate and adjust the polygon back to 4 corner
+    PolyRotateC = floorplanPoly.intersection(PolyRotate).convex_hull
+    # PolyRotateC = floorplanPoly.intersection(PolyRotate)
+    
+    PolyRotateB = ReformBackShape(bearingRad,PolyRotateC,x2,x1,y1,cam_height,cameraToTop,cameraY,cam_geom) ## Rotate and adjust the polygon back to 4 corner
     polyText = PolyRotateB.wkt
     return (polyText)
 
 
 
-def CreateDOMEFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,cameraX,cameraY):
+def CreateDOMEFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,cameraX,cameraY,camera_UID,floorplanPoly):
     viewingAngle = (90-float(view_angle)) * math.pi /180
     FOVWidthAngle = 2*math.atan (sensorWidth/(2*focusLength))
     FOVHeightAngle = 2*math.atan(sensorHeight/(2*focusLength))
@@ -132,14 +192,16 @@ def CreateDOMEFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,
     x4 = float(cameraX - trapTop)
     y1 = float(cameraY + cameraToBottom)
     y2 = float(cameraY + cameraToTop)
-
+    
     polyabc = Polygon(((x4,y2),(x3,y2),(x1,y1),(x2,y1)))
     PolyRotate = rotate(polyabc,bearingRad,cam_geom,use_radians=True)
 
-    ## operation to join floorplan with the floor print
-    PolyRotate = floorplanPoly.intersection(PolyRotate).convex_hull
-    PolyRotateB = ReformBackShape(bearingRad,PolyRotate,x2,x1,y1,cam_height,cameraToTop,cameraY) ## Rotate and adjust the polygon back to 4 corner
+    ## store the footprint
+    storeOrgdb(polyabc,camera_UID)
     
+    ## operation to join floorplan with the floor print
+    PolyRotateC = floorplanPoly.intersection(PolyRotate).convex_hull
+    PolyRotateB = ReformBackShape(bearingRad,PolyRotateC,x2,x1,y1,cam_height,cameraToTop,cameraY,cam_geom) ## Rotate and adjust the polygon back to 4 corner
     ## going to blank this out for now.
     polyText = PolyRotateB.wkt
 
@@ -164,7 +226,7 @@ floorplanPoly = wkb.loads(floorPlan,hex=True)  ## convert the floor geom
 ## extract the camera detail
 cursor = db.cursor()
 cursor.execute("""select * from "osi_camera";""") ## <== get the whole content of fixed lens camera
-##cursor.execute("""select * from "osi_camera" where type = 'FIXED';""") ## <== get the whole content of fixed lens camera
+
 CameraList = cursor.fetchall()
 for camera in CameraList:
     srid ='3857'
@@ -182,15 +244,11 @@ for camera in CameraList:
     cam_geom = wkb.loads(geometry,hex=True)
     ([cameraX],[cameraY]) = cam_geom.xy
 
-##    if cameraType == "Network camera":
 
     if cameraType == "FIXED":
 ##        viewingAngle = float(view_angle) * math.pi /180
         ## change the viewing angle to |\ <= viewing angle
-        polyText = CreateFixedFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,cameraX,cameraY)
-
-        ## get the resolution of camera
-        
+        polyText = CreateFixedFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,cameraX,cameraY,camera_UID,floorplanPoly)
 
         polyFHolder = []
         polyText=str(polyText).replace("POLYGON ((","")
@@ -207,20 +265,15 @@ for camera in CameraList:
                                 set footprint_str = '%s'
                             where camera_uid = '%s';"""
 
-        
         cursor.execute(UpdateStatement % (str(polyFHolder),camera_UID))
         db.commit()
 
 
 
+
     elif cameraType == "DOME":
 
-        polyTextdOME = CreateDOMEFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,cameraX,cameraY)
-        # polystarement = "ST_GeomFromText('"+polyTextdOME+"',3857)"
-
-        ## get the resolution of camera
-        
-
+        polyTextdOME = CreateDOMEFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,cameraX,cameraY,camera_UID,floorplanPoly)
         polyHolder = []
         polyTextdOME=str(polyTextdOME).replace("POLYGON ((","")
         polyTextdOME=str(polyTextdOME).replace("))","")
@@ -237,8 +290,8 @@ for camera in CameraList:
                                 set footprint_str = '%s'
                             where camera_uid = '%s';"""
 
-  
-        cursor.execute(UpdateStatement % (str(polyFHolder),camera_UID))
+
+        cursor.execute(UpdateStatement % (str(polyHolder),camera_UID))
 
         db.commit()
 
