@@ -84,20 +84,6 @@ def getCameraFOOTPrint():
     return (footprintA)
 
 
-def reconstruct9Point(footprint2):
-    ## Coordinate in this order.
-    ## x4,y2 ------------ x3,y2
-    ##   |    (x4+x3)/2    |
-    ##    |              |
-    ## x2,y1 ---------- x1,y1
-    x4,y2 = footprint2[0]
-    x3,y2 = footprint2[1]
-    x1,y1 = footprint2[2]
-    x2,y1 = footprint2[3]
-    ## reconstruct the footprint from 4 points to 9 points
-    ReconstructFP = [[x4, ((x4+x3)/2), x3, ((x4+x2)/2), ((x4+x3)/2),((x3+x1)/2),x2,((x2+x1)/2),x1],
-    [y2,y2,y2, ((y1+y2)/2), ((y1+y2)/2), ((y1+y2)/2), y1,y1,y1]]
-    return (ReconstructFP,y1,y2,x4,x3)
 
 
 def transformationMatrix(footprint,TVgrid):
@@ -121,25 +107,24 @@ def transformationMatrix(footprint,TVgrid):
 
     ## TVgrid POINTS
     ## small x and y in the example
-    if (TVgrid[0]!=0 and TVgrid[1] !=0):
-        TX4,TX3,TX1,TX2 = TVgrid[0]
-        TY4,TY3,TY1,TY2 = TVgrid[1]
 
-        matrixA = np.array([[TX4,TY4,1,0,0,0,-TX4*x4,-TY4*x4],
-                    [TX3,TY3,1,0,0,0,-TX3*x3,-TY3*x3],
-                    [TX1,TY1,1,0,0,0,-TX1*x1,-TY1*x1],
-                    [TX2,TY2,1,0,0,0,-TX2*x2,-TY2*x2],
-                    [0,0,0,TX4,TY4,1,-TX4*y2,-TY4*y2],
-                    [0,0,0,TX3,TY3,1,-TX3*y2,-TY3*y2],
-                    [0,0,0,TX2,TY2,1,-TX2*y1,-TY2*y1],
-                    [0,0,0,TX1,TY1,1,-TX1*y1,-TY1*y1]])
+    TX4,TX3,TX1,TX2 = TVgrid[0]
+    TY4,TY3,TY1,TY2 = TVgrid[1]
 
-        ## output matrix in real world coordinate system
-        O_matrix = np.array([x4,x3,x1,x2,y2,y2,y1,y1])
-        ## use python matrix solver to get the transformation matrix.
-        TMatrix = np.linalg.solve(matrixA,O_matrix)
-    else:
-        TMatrix = [0,0,0,0,0,0,0,0]
+    matrixA = np.array([[TX4,TY4,1,0,0,0,-TX4*x4,-TY4*x4],
+                [TX3,TY3,1,0,0,0,-TX3*x3,-TY3*x3],
+                [TX1,TY1,1,0,0,0,-TX1*x1,-TY1*x1],
+                [TX2,TY2,1,0,0,0,-TX2*x2,-TY2*x2],
+                [0,0,0,TX4,TY4,1,-TX4*y2,-TY4*y2],
+                [0,0,0,TX3,TY3,1,-TX3*y2,-TY3*y2],
+                [0,0,0,TX2,TY2,1,-TX2*y1,-TY2*y1],
+                [0,0,0,TX1,TY1,1,-TX1*y1,-TY1*y1]])
+
+    ## output matrix in real world coordinate system
+    O_matrix = np.array([x4,x3,x1,x2,y2,y2,y1,y1])
+    ## use python matrix solver to get the transformation matrix.
+    TMatrix = np.linalg.solve(matrixA,O_matrix)
+
 
     return TMatrix
 
@@ -182,31 +167,12 @@ if __name__ == '__main__':
             # footprint =  ast.literal_eval(cameras[20])
             ## get the footprint pre ops.
             footprint =  ast.literal_eval(cameras[22])
-            # Get_view_angle = getCameraFOOTPrint()[1]
+            
 
             ## transformation matrix
-
-
             transformM = transformationMatrix(footprint,TVgrid)
             # print transformM
 
             Store_transformM(transformM,cam_uid)
 
-            ## locationPosition (x,y)
-            # a1 = [[sX,sY],[sX,sY+objectPixelH]]
-            # CollectX = []
-            # CollectY = []
-            # for pos in a1:
-            #     xpos = pos[0]
-            #     ypos = pos[1]
-            #     realx,realy= realworldXY(xpos,ypos,transformM)
-            #     CollectX.append(realx)
-            #     CollectY.append(realy)
-
-            # objDist = math.sqrt((CollectY[0]-CollectY[1])**2 + (CollectX[0]-CollectX[1])**2)
-            # distanceToCamera = math.sqrt((CollectY[0]-camY)**2 + (CollectX[0]-camX)**2)
-
-            # objectHeight = (cam_height*objDist)/distanceToCamera
-
-
-    # print "screen to real world=>" + str(resultRW)
+    

@@ -90,10 +90,6 @@ def storeOrgdb(store_wkt,camera_UID):
         cursor.execute(UpdateStatement3 % (str(store_wkt),camera_UID))
         db.commit()
 
-
-
-
-
     polyFHolder = []
     polyText=str(store_wkt).replace("POLYGON ((","")
     polyText=str(polyText).replace("))","")
@@ -103,10 +99,6 @@ def storeOrgdb(store_wkt,camera_UID):
         splitstr = str(cLEANstr).split(" ")
         floatContent = [float(digit) for digit in splitstr]
         polyFHolder.append(floatContent)
-
-
-
-
 
     # CheckFootprintExist = """Select count(uid) from office_footprint where uid = '%s';"""
     UpdateStatement = """update osi_camera
