@@ -3,12 +3,38 @@ import subprocess
 import json
 from bs4 import BeautifulSoup
 import re
+import psycopg2
 
-# RTSPlINK = "rtsp://root:pass@192.168.8.153/axis-media/media.amp"
-# RTSPlINK ="rtsp://root:password@192.168.8.242/axis-media/media.amp"
-RTSPlINK = "rtsp://admin:admin@172.16.20.12/cam/realmonitor?channel=1&subtype=0"
-# RTSPlINK  = "rtsp://172.16.20.14/h264"
 
+def connectiondb():
+    db="osi_social_db"
+    dbuser="postgres"
+    dbpassword=""
+    dbhost="192.168.8.12"
+    dbport="5432"
+    ## Load data from postgres
+    db = psycopg2.connect(database=db, user=dbuser, password=dbpassword, host=dbhost, port=dbport)
+    ## extract the floor plan to compare
+    cursor = db.cursor()
+    return cursor
+
+
+
+def updatedb(resolution,camera_UID):
+    db="osi_social_db"
+    dbuser="postgres"
+    dbpassword=""
+    dbhost="192.168.8.12"
+    dbport="5432"
+    ## Load data from postgres
+    db = psycopg2.connect(database=db, user=dbuser, password=dbpassword, host=dbhost, port=dbport)
+    ## extract the floor plan to compare
+    cursor = db.cursor()
+
+    UpdateStatement = """update osi_camera set camera_res = '%s' where camera_uid = '%s'"""
+    cursor.execute(UpdateStatement % (resolution,camera_UID))
+    db.commit()
+    print "update: "+ str(camera_UID)
 
 def CameraResolution(stream_url):
     try:
@@ -33,29 +59,23 @@ def CameraResolution(stream_url):
     except Exception:
         resExtract = str("0,0")
 
-
-    
     return resExtract
 
 
 
 if __name__ == '__main__':
 
-    db="osi_social_db"
-    dbuser="postgres"
-    dbpassword=""
-    dbhost="192.168.8.12"
-    dbport="5432"
 
-    ## Load data from postgres
-    db = psycopg2.connect(database=db, user=dbuser, password=dbpassword, host=dbhost, port=dbport)
-
-    ## extract the floor plan to compare
-    cursor = db.cursor()
-    cursor.execute("""select * from "osi_camera";""") ## <== get the whole content of fixed lens camera
+    cursor = connectiondb()
+    cursor.execute("""select * from osi_camera;""") ## <== get the whole content of fixed lens camera
     CameraList = cursor.fetchall()
+
     for camera in CameraList:
         stream_url = camera[7]
+        camera_UID =camera[2]
+        ResResult = CameraResolution(stream_url)
+        updatedb(ResResult,camera_UID)
+        # print("update cameraid: "+camera_UID)
 
-    CameraResolution
+
 

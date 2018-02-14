@@ -68,8 +68,7 @@ for camera in CameraList:
         hypoTop = cam_height/(math.cos(viewingAngle+(0.5*FOVHeightAngle)))
         trapTop = math.tan(0.5*FOVHeightAngle)*hypoTop
 
-        print trapTop
-        print trapBottom
+
         ## Coordinate in this order.
         ## x4,y2 ------------ x3,y2
         ##   |    (x4+x3)/2    |
@@ -87,8 +86,6 @@ for camera in CameraList:
         PolyRotate = rotate(polyabc,bearingRad,cam_geom,use_radians=True)
 
         polyText = PolyRotate.wkt
-
-
         polystarement = "ST_GeomFromText('"+polyText+"',3857)"
 
 
@@ -111,8 +108,7 @@ for camera in CameraList:
             ## Update row
             cursor.execute(UpdateStatement % (polystarement,Floor,camera_UID))
             db.commit()
-            print "Update row"
-            print "*"*50
+     
     else:
         pass
 

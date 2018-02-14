@@ -64,7 +64,7 @@ def ReformBackShape(bearingRad,PolyRotate,x2,x1,y1,cam_height,cameraToTop,camera
 
 ## move the update camera resolution script to another script as this is slowing dow the processing time
 
-def storeOrgdb(store_wkt,camera_UID):
+def storeOrgdb(store_wkt,camera_UID,org_fp ):
 
     db="osi_social_db"
     dbuser="postgres"
@@ -91,7 +91,8 @@ def storeOrgdb(store_wkt,camera_UID):
         db.commit()
 
     polyFHolder = []
-    polyText=str(store_wkt).replace("POLYGON ((","")
+    
+    polyText=str(org_fp).replace("POLYGON ((","")
     polyText=str(polyText).replace("))","")
     polytextList = polyText.split(",")
     for data in polytextList:
@@ -99,6 +100,7 @@ def storeOrgdb(store_wkt,camera_UID):
         splitstr = str(cLEANstr).split(" ")
         floatContent = [float(digit) for digit in splitstr]
         polyFHolder.append(floatContent)
+
 
     # CheckFootprintExist = """Select count(uid) from office_footprint where uid = '%s';"""
     UpdateStatement = """update osi_camera
@@ -149,7 +151,7 @@ def CreateFixedFootprint(view_angle, sensorWidth, sensorHeight, focusLength, bea
     polyabc = Polygon(((x4,y2),(x3,y2),(x1,y1),(x2,y1)))
     PolyRotate = rotate(polyabc,bearingRad,cam_geom,use_radians=True)
     ## load the pre-adjust to database
-    storeOrgdb(polyabc,camera_UID)
+    storeOrgdb(PolyRotate,camera_UID,polyabc)
 
     ## operation to join floorplan with the floor print
     PolyRotateC = floorplanPoly.intersection(PolyRotate).convex_hull
@@ -189,7 +191,7 @@ def CreateDOMEFootprint(view_angle,sensorWidth,sensorHeight,focusLength,bearing,
     PolyRotate = rotate(polyabc,bearingRad,cam_geom,use_radians=True)
 
     ## store the footprint
-    storeOrgdb(polyabc,camera_UID)
+    storeOrgdb(PolyRotate,camera_UID,polyabc)
     
     ## operation to join floorplan with the floor print
     PolyRotateC = floorplanPoly.intersection(PolyRotate).convex_hull
